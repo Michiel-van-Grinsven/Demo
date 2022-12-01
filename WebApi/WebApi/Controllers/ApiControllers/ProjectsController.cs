@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
+using System.Security.Claims;
 using WebApi.Data;
 using WebApi.Models.DataModels;
 
@@ -24,9 +25,21 @@ namespace WebApi.Controllers.ApiControllers
 
         private IIncludableQueryable<Project, ICollection<Product>> GetProjectsIncludingNavigation()
         {
-            return _context.Projects.Include(p => p.AssignedUsers).Include(p => p.AssignedProducts);
+            return _context.Projects
+                .Include(p => p.Creator)
+                .Include(p => p.AssignedUsers)
+                .Include(p => p.AssignedProducts);
         }
 
+        /// <summary>
+        /// Get all projects.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///     Put /api/Projects/
+        /// </remarks>
+        /// <returns>A list of projects.</returns>
+        /// <response code="404">No projects found.</response>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProjectReadDto>>> GetProjects()
         {
@@ -38,6 +51,9 @@ namespace WebApi.Controllers.ApiControllers
                 .Select(project => new ProjectReadDto(project)).ToListAsync();
         }
 
+        /// <summary>
+        /// Get all my projects.
+        /// </summary>
         [HttpGet("my")]
         public async Task<ActionResult<IEnumerable<ProjectReadDto>>> GetMyProjects()
         {
@@ -46,17 +62,29 @@ namespace WebApi.Controllers.ApiControllers
                 return NotFound();
             }
 
-            var myUser = _context.Users.SingleOrDefault(user => user.UserName == User.Identity.Name);
-
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
             if (myUser == null)
             {
                 return NotFound();
             }
+
             return await GetProjectsIncludingNavigation()
                 .Where(project => project.CreatorId == myUser.Id)
                 .Select(project => new ProjectReadDto(project)).ToListAsync();
         }
 
+        /// <summary>
+        /// Get project by id.
+        /// </summary>
+        /// <param name="id">projtect id</param>
+        /// <remarks>
+        /// Sample request:
+        ///     Put /api/Projects/{guid}
+        /// </remarks>
+        /// <returns>A project.</returns>
+        /// <response code="404">No  project found.</response>
         [HttpGet("{id}")]
         public async Task<ActionResult<ProjectReadDto>> GetProject(Guid id)
         {
@@ -64,8 +92,8 @@ namespace WebApi.Controllers.ApiControllers
             {
                 return NotFound();
             }
-            var project = await _context.Projects.FindAsync(id);
 
+            var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
                 return NotFound();
@@ -74,6 +102,9 @@ namespace WebApi.Controllers.ApiControllers
             return new ProjectReadDto(project);
         }
 
+        /// <summary>
+        /// Overwrite a project.
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProject(Guid id, ProjectCreateDto dto)
         {
@@ -113,6 +144,55 @@ namespace WebApi.Controllers.ApiControllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Edit my project.
+        /// </summary>
+        [HttpPut("{id}/my")]
+        public async Task<IActionResult> EditMyProject(Guid id, ProjectCreateDto dto)
+        {
+            var project = new Project(dto)
+            {
+                Id = id,
+                UpdatedDate = DateTime.Now,
+            };
+
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
+            if (myUser == null)
+            {
+                return NotFound();
+            }
+
+            project.Creator = _context.Users.SingleOrDefault(user => user.Id == myUser.Id);
+            var users = await _context.Users.Where(user => dto.AssignedUsers.Contains(user.Id)).ToListAsync();
+            project.AssignedUsers = users;
+            var products = await _context.Products.Where(product => dto.AssignedProducts.Contains(product.Id)).ToListAsync();
+            project.AssignedProducts = products;
+
+            _context.Entry(project).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProjectExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Create a project.
+        /// </summary>
         [HttpPost]
         public async Task<ActionResult<ProjectCreateDto>> PostProject(ProjectCreateDto dto)
         {
@@ -134,6 +214,9 @@ namespace WebApi.Controllers.ApiControllers
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new ProjectReadDto(project));
         }
 
+        /// <summary>
+        /// Create a new project for me.
+        /// </summary>
         [HttpPost("my")]
         public async Task<ActionResult<ProjectUpdateDto>> PostMyProject(ProjectUpdateDto dto)
         {
@@ -157,6 +240,9 @@ namespace WebApi.Controllers.ApiControllers
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new ProjectReadDto(project));
         }
 
+        /// <summary>
+        /// Delete a project.
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(Guid id)
         {
@@ -170,6 +256,40 @@ namespace WebApi.Controllers.ApiControllers
                 return NotFound();
             }
 
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Delete my project.
+        /// </summary>
+        [HttpDelete("{id}/my")]
+        public async Task<IActionResult> DeleteMyProject(Guid id)
+        {
+            if (_context.Projects == null)
+            {
+                return NotFound();
+            }
+
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
+            if (myUser == null)
+            {
+                return NotFound();
+            }
+
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+            {
+                return NotFound();
+            }
+            if (project.CreatorId != myUser.Id)
+            {
+                return Problem("Access denied.");
+            }
             _context.Projects.Remove(project);
             await _context.SaveChangesAsync();
 

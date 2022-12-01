@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations.Schema;
 using WebApi.Areas.Identity.Data;
 using WebApi.Models.DataModels;
 using WebApi.Models.DataModels.Interfaces;
@@ -18,11 +17,24 @@ public class WebApiContext : IdentityDbContext<WebApiUser, WebApiRole, Guid>
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<WebApiRole>(x =>
+        {
+            x.HasData(
+                new WebApiRole { Id = Guid.NewGuid(), Name = "Admin" },
+                new WebApiRole { Id = Guid.NewGuid(), Name = "Client" });
+        });
+
         builder.Entity<WebApiUser>(x =>
         {
             x.Property(x => x.Id)
                 .ValueGeneratedOnAdd()
                 .HasDefaultValueSql("newsequentialid()");
+            x.Property(x => x.CreatedDate)
+                .ValueGeneratedOnAdd()
+                .HasDefaultValueSql("getdate()");
+            x.Property(x => x.UpdatedDate)
+                .ValueGeneratedOnAddOrUpdate()
+                .HasDefaultValueSql("getdate()");
         });
 
         builder.Entity<Product>(x =>
@@ -87,7 +99,6 @@ public class WebApiContext : IdentityDbContext<WebApiUser, WebApiRole, Guid>
                 );
             x.HasKey(x => x.Id);
             x.ToTable("Projects");
-
         });
     }
 

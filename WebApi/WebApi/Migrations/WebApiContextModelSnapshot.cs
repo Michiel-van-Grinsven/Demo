@@ -177,6 +177,9 @@ namespace WebApi.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<Guid?>("WebApiUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
@@ -184,7 +187,21 @@ namespace WebApi.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
+                    b.HasIndex("WebApiUserId");
+
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("10720e71-308a-45f2-9f5e-45ca314d0bf1"),
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = new Guid("4b58f9ad-12f1-4032-bb1d-140f21853973"),
+                            Name = "Client"
+                        });
                 });
 
             modelBuilder.Entity("WebApi.Areas.Identity.Data.WebApiUser", b =>
@@ -202,7 +219,9 @@ namespace WebApi.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -249,7 +268,9 @@ namespace WebApi.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("UpdatedDate")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -291,7 +312,7 @@ namespace WebApi.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedDate")
-                        .ValueGeneratedOnAdd()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("getdate()");
 
@@ -325,7 +346,7 @@ namespace WebApi.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedDate")
-                        .ValueGeneratedOnAdd()
+                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("getdate()");
 
@@ -417,6 +438,13 @@ namespace WebApi.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WebApi.Areas.Identity.Data.WebApiRole", b =>
+                {
+                    b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", null)
+                        .WithMany("roles")
+                        .HasForeignKey("WebApiUserId");
+                });
+
             modelBuilder.Entity("WebApi.Models.DataModels.Product", b =>
                 {
                     b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", "Creator")
@@ -444,6 +472,8 @@ namespace WebApi.Migrations
                     b.Navigation("CreatedProducts");
 
                     b.Navigation("CreatedProjects");
+
+                    b.Navigation("roles");
                 });
 #pragma warning restore 612, 618
         }

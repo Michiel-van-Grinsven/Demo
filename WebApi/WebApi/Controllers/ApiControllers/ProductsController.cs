@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
+using System.Security.Claims;
 using WebApi.Data;
 using WebApi.Models.DataModels;
 
@@ -17,18 +19,41 @@ namespace WebApi.Controllers.ApiControllers
             _context = context;
         }
 
-        // GET: api/Products
-        [HttpGet]
+        private bool ProductExists(Guid id)
+        {
+            return (_context.Products?.Any(e => e.Id == id)).GetValueOrDefault();
+        }
+
+        private IIncludableQueryable<Product, ICollection<Project>> GetProductsIncludingNavigation()
+        {
+            return _context.Products
+                .Include(p => p.Creator)
+                .Include(p => p.AssignedProjects);
+        }
+
+        /// <summary>
+        /// Get all products.
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///     Put /api/Products/
+        /// </remarks>
+        /// <returns>A list of products.</returns>
+        /// <response code="404">No products found.</response>
+        [HttpGet, Authorize]
         public async Task<ActionResult<IEnumerable<ProductReadDto>>> GetProducts()
         {
             if (_context.Products == null)
             {
                 return NotFound();
             }
-            return await _context.Products.Select(product => new ProductReadDto(product)).ToListAsync();
+            return await GetProductsIncludingNavigation()
+                .Select(product => new ProductReadDto(product)).ToListAsync();
         }
 
-        // GET: api/Products
+        /// <summary>
+        /// Get all my products.
+        /// </summary>
         [HttpGet("my")]
         public async Task<ActionResult<IEnumerable<ProductReadDto>>> GetMyProducts()
         {
@@ -37,16 +62,29 @@ namespace WebApi.Controllers.ApiControllers
                 return NotFound();
             }
 
-            var myUser = _context.Users.SingleOrDefault(user => user.Email == User.Identity.Name);
-
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
             if (myUser == null)
             {
                 return NotFound();
             }
-            return await _context.Products.Where(product => product.CreatorId == myUser.Id).Select(product => new ProductReadDto(product)).ToListAsync();
+
+            return await GetProductsIncludingNavigation()
+                .Where(product => product.CreatorId == myUser.Id)
+                .Select(product => new ProductReadDto(product)).ToListAsync();
         }
 
-        // GET: api/Products/5
+        /// <summary>
+        /// Get product by id.
+        /// </summary>
+        /// <param name="id">projtect id</param>
+        /// <remarks>
+        /// Sample request:
+        ///     Put /api/Products/{guid}
+        /// </remarks>
+        /// <returns>A product.</returns>
+        /// <response code="404">No  product found.</response>
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductReadDto>> GetProduct(Guid id)
         {
@@ -54,8 +92,8 @@ namespace WebApi.Controllers.ApiControllers
             {
                 return NotFound();
             }
-            var product = await _context.Products.FindAsync(id);
 
+            var product = await _context.Products.FindAsync(id);
             if (product == null)
             {
                 return NotFound();
@@ -64,11 +102,12 @@ namespace WebApi.Controllers.ApiControllers
             return new ProductReadDto(product);
         }
 
-        // PUT: api/Products/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Overwrite a product.
+        /// </summary>
         [HttpPut("{id}")]
-        //[Authorize(Roles = "Administrators")]
-        public async Task<IActionResult> PutProduct(Guid id, ProductUpdateDto dto)
+        [Authorize("Admin")]
+        public async Task<IActionResult> PutProduct(Guid id, ProductCreateDto dto)
         {
             var product = new Product(dto)
             {
@@ -81,7 +120,8 @@ namespace WebApi.Controllers.ApiControllers
             {
                 return Problem("Creator does not exist.");
             }
-            product.AssignedProjects = _context.Projects.Where(project => dto.AssignedProjects.Contains(project.Id)).ToList();
+            var projects = await _context.Projects.Where(project => dto.AssignedProjects.Contains(project.Id)).ToListAsync();
+            product.AssignedProjects = projects;
 
             _context.Entry(product).State = EntityState.Modified;
             try
@@ -103,10 +143,56 @@ namespace WebApi.Controllers.ApiControllers
             return NoContent();
         }
 
-        // POST: api/Products
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Edit my product.
+        /// </summary>
+        [HttpPut("{id}/my")]
+        public async Task<IActionResult> EditMyProduct(Guid id, ProductCreateDto dto)
+        {
+            var product = new Product(dto)
+            {
+                Id = id,
+                UpdatedDate = DateTime.Now,
+            };
+
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
+            if (myUser == null)
+            {
+                return NotFound();
+            }
+
+            product.Creator = _context.Users.SingleOrDefault(user => user.Id == product.CreatorId);
+            var projects = await _context.Projects.Where(project => dto.AssignedProjects.Contains(project.Id)).ToListAsync();
+            product.AssignedProjects = projects;
+
+            _context.Entry(product).State = EntityState.Modified;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!ProductExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Create a product.
+        /// </summary>
         [HttpPost]
-        public async Task<ActionResult<ProductUpdateDto>> PostProduct(ProductCreateDto dto)
+        [Authorize("Admin")]
+        public async Task<ActionResult<ProductCreateDto>> PostProduct(ProductCreateDto dto)
         {
             if (_context.Products == null)
             {
@@ -119,7 +205,6 @@ namespace WebApi.Controllers.ApiControllers
             {
                 return Problem("Creator does not exist.");
             }
-            product.AssignedProjects = _context.Projects.Where(project => dto.AssignedProjects.Contains(project.Id)).ToList();
 
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
@@ -127,8 +212,9 @@ namespace WebApi.Controllers.ApiControllers
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, new ProductReadDto(product));
         }
 
-        // POST: api/Products/my
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        /// <summary>
+        /// Create a new product for me.
+        /// </summary>
         [HttpPost("my")]
         public async Task<ActionResult<ProductUpdateDto>> PostMyProduct(ProductUpdateDto dto)
         {
@@ -139,13 +225,12 @@ namespace WebApi.Controllers.ApiControllers
 
             var product = new Product(dto)
             {
-                Creator = _context.Users.SingleOrDefault(user => user.Email == User.Identity.Name)
+                Creator = _context.Users.SingleOrDefault(user => user.UserName == User.Identity.Name)
             };
             if (product.Creator == null)
             {
                 return Problem("Creator does not exist.");
             }
-            product.AssignedProjects = _context.Projects.Where(project => dto.AssignedProjects.Contains(project.Id)).ToList();
 
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
@@ -153,8 +238,11 @@ namespace WebApi.Controllers.ApiControllers
             return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, new ProductReadDto(product));
         }
 
-        // DELETE: api/Products/5
+        /// <summary>
+        /// Delete a product.
+        /// </summary>
         [HttpDelete("{id}")]
+        [Authorize("Admin")]
         public async Task<IActionResult> DeleteProduct(Guid id)
         {
             if (_context.Products == null)
@@ -173,9 +261,38 @@ namespace WebApi.Controllers.ApiControllers
             return NoContent();
         }
 
-        private bool ProductExists(Guid id)
+        /// <summary>
+        /// Delete my product.
+        /// </summary>
+        [HttpDelete("{id}/my")]
+        public async Task<IActionResult> DeleteMyProduct(Guid id)
         {
-            return (_context.Products?.Any(e => e.Id == id)).GetValueOrDefault();
+            if (_context.Products == null)
+            {
+                return NotFound();
+            }
+
+            var myUser = _context.Users
+                .SingleOrDefault(user => user.Id.ToString()
+                .Equals(User.FindFirstValue(ClaimTypes.NameIdentifier)));
+            if (myUser == null)
+            {
+                return NotFound();
+            }
+
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+            if (product.CreatorId != myUser.Id)
+            {
+                return Problem("Access denied.");
+            }
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

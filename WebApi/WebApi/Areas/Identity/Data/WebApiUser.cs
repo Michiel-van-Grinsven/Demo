@@ -18,10 +18,10 @@ public class WebApiUser : IdentityUser<Guid>, ITimeEntity
     public string Name { get { return $"{FirstName} {LastName}"; } }
 
     [Required]
-    public DateTime CreatedDate { get; set; }
+    public DateTime CreatedDate { get; set; } = DateTime.Now;
 
     [Required]
-    public DateTime UpdatedDate { get; set; }
+    public DateTime UpdatedDate { get; set; } = DateTime.Now;
 
     public ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
 
