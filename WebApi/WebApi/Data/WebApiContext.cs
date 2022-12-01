@@ -18,91 +18,97 @@ public class WebApiContext : IdentityDbContext<WebApiUser, WebApiRole, Guid>
     {
         base.OnModelCreating(builder);
 
-        SetDefaultValuesForGuids(builder);
+        builder.Entity<WebApiUser>(x =>
+        {
+            x.Property(x => x.Id)
+                .ValueGeneratedOnAdd()
+                .HasDefaultValueSql("newsequentialid()");
+        });
 
         builder.Entity<Product>(x =>
         {
+            x.Property(x => x.Id)
+                .ValueGeneratedOnAdd()
+                .HasDefaultValueSql("newsequentialid()");
             x.Property(x => x.CreatedDate)
+                .ValueGeneratedOnAdd()
                 .HasDefaultValueSql("getdate()");
             x.Property(x => x.UpdatedDate)
+                .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("getdate()");
-            //x.Property(x => x.Id).UseIdentityColumn();
-            x.HasOne(x => x.Creator).WithMany(x => x.CreatedProducts).HasForeignKey("CreatorId");
+            x.HasOne(x => x.Creator)
+                .WithMany(x => x.CreatedProducts)
+                .HasForeignKey("CreatorId")
+                .OnDelete(DeleteBehavior.NoAction);
             x.HasKey(x => x.Id);
             x.ToTable("Products");
         });
 
         builder.Entity<Project>(x =>
         {
+            x.Property(x => x.Id)
+                .ValueGeneratedOnAdd()
+                .HasDefaultValueSql("newsequentialid()");
             x.Property(x => x.CreatedDate)
+                .ValueGeneratedOnAdd()
                 .HasDefaultValueSql("getdate()");
             x.Property(x => x.UpdatedDate)
+                .ValueGeneratedOnAddOrUpdate()
                 .HasDefaultValueSql("getdate()");
-            //x.Property(x => x.Id).UseIdentityColumn();
-            x.HasOne(x => x.Creator).WithMany(x => x.CreatedProjects).HasForeignKey("CreatorId");
-            x.HasMany(x => x.AssignedUsers).WithMany(user => user.AssignedProjects)
+            x.HasOne(x => x.Creator)
+                .WithMany(x => x.CreatedProjects)
+                .HasForeignKey("CreatorId")
+                .OnDelete(DeleteBehavior.NoAction);
+            x.HasMany(x => x.AssignedUsers)
+                .WithMany(user => user.AssignedProjects)
                 .UsingEntity<Dictionary<string, object>>(
                     "UserProjectAssignments",
                     table => table.HasOne<WebApiUser>()
-                            .WithMany().HasForeignKey("UserId"),
+                            .WithMany()
+                            .HasForeignKey("UserId")
+                            .OnDelete(DeleteBehavior.NoAction),
                     table => table.HasOne<Project>()
-                            .WithMany().HasForeignKey("ProjectId")
+                            .WithMany()
+                            .HasForeignKey("ProjectId")
+                            .OnDelete(DeleteBehavior.NoAction)
                 );
-            x.HasMany(x => x.AssignedProducts).WithMany(user => user.AssignedProjects)
+            x.HasMany(x => x.AssignedProducts)
+                .WithMany(user => user.AssignedProjects)
                 .UsingEntity<Dictionary<string, object>>(
                     "ProductProjectAssignments",
                     table => table.HasOne<Product>()
-                            .WithMany().HasForeignKey("ProductId"),
+                            .WithMany()
+                            .HasForeignKey("ProductId")
+                            .OnDelete(DeleteBehavior.NoAction),
                     table => table.HasOne<Project>()
-                            .WithMany().HasForeignKey("ProjectId")
+                            .WithMany()
+                            .HasForeignKey("ProjectId")
+                            .OnDelete(DeleteBehavior.NoAction)
                 );
             x.HasKey(x => x.Id);
             x.ToTable("Projects");
-           
-        });
-    }
 
-    private static void SetDefaultValuesForGuids(ModelBuilder builder)
-    {
-        foreach (var entity in builder.Model.GetEntityTypes()
-        .Where(t =>
-            t.ClrType.GetProperties()
-                .Any(p => p.CustomAttributes.Any(a => a.AttributeType == typeof(DatabaseGeneratedAttribute)))))
-        {
-            foreach (var property in entity.ClrType.GetProperties()
-                .Where(p => p.PropertyType == typeof(Guid) && p.CustomAttributes.Any(a => a.AttributeType == typeof(DatabaseGeneratedAttribute))))
-            {
-                builder
-                    .Entity(entity.ClrType)
-                    .Property(property.Name)
-                    .HasDefaultValueSql("newsequentialid()");
-            }
-        }
+        });
     }
 
     public override int SaveChanges()
     {
-        var entries = ChangeTracker
-            .Entries()
-            .Where(e => e.Entity is ITimeEntity && (
-                    e.State == EntityState.Added
-                    || e.State == EntityState.Modified));
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.Entity is ITimeEntity &&
+                (e.State == EntityState.Added || e.State == EntityState.Modified));
 
         foreach (var entityEntry in entries)
         {
             ((ITimeEntity)entityEntry.Entity).UpdatedDate = DateTime.Now;
-
             if (entityEntry.State == EntityState.Added)
             {
                 ((ITimeEntity)entityEntry.Entity).CreatedDate = DateTime.Now;
             }
         }
-
         return base.SaveChanges();
     }
 
     public DbSet<Product> Products { get; set; } = default!;
 
     public DbSet<Project> Projects { get; set; } = default!;
-
 }

@@ -42,6 +42,6 @@ namespace WebApi.Models.DataModels
         [NotMapped]
         public double TotalCarbonOutput { get { return CarbonOutputPerGram * WeightInGrams; } }
 
-        public virtual ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
+        public ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
     }
 }

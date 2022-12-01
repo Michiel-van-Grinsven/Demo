@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using WebApi.Data;
 using WebApi.Models.DataModels;
 
@@ -18,8 +19,16 @@ namespace WebApi.Controllers.ViewControllers
         // GET: Projects
         public async Task<IActionResult> Index()
         {
-            var webApiContext = _context.Projects.Include(p => p.Creator);
+            var webApiContext = GetProductContext();
             return View(await webApiContext.ToListAsync());
+        }
+
+        private IIncludableQueryable<Project, ICollection<Product>> GetProductContext()
+        {
+            return _context.Projects
+                .Include(p => p.Creator)
+                .Include(p => p.AssignedUsers)
+                .Include(p => p.AssignedProducts);
         }
 
         // GET: Projects/Details/5
@@ -30,8 +39,7 @@ namespace WebApi.Controllers.ViewControllers
                 return NotFound();
             }
 
-            var project = await _context.Projects
-                .Include(p => p.Creator)
+            var project = await GetProductContext()
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (project == null)
             {
@@ -44,7 +52,9 @@ namespace WebApi.Controllers.ViewControllers
         // GET: Projects/Create
         public IActionResult Create()
         {
-            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "FirstName");
+            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id");
+            ViewData["AssignedUsers"] = new SelectList(_context.Users, "Id", "Id");
+            ViewData["AssignedProducs"] = new SelectList(_context.Products, "Id", "Id");
             return View();
         }
 
@@ -53,7 +63,7 @@ namespace WebApi.Controllers.ViewControllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,CreatorId,CreatedDate,UpdatedDate")] Project project)
+        public async Task<IActionResult> Create([Bind("Id,Name,CreatorId,CreatedDate,UpdatedDate,AssignedUsers,AssignedProducts")] Project project)
         {
             if (ModelState.IsValid)
             {
@@ -62,7 +72,8 @@ namespace WebApi.Controllers.ViewControllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "FirstName", project.CreatorId);
+            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id", project.CreatorId);
+            ViewData["AssignedUsers"] = new SelectList(_context.Users, "Id", "Id", project.AssignedUsers);
             return View(project);
         }
 
@@ -79,7 +90,7 @@ namespace WebApi.Controllers.ViewControllers
             {
                 return NotFound();
             }
-            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "FirstName", project.CreatorId);
+            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id", project.CreatorId);
             return View(project);
         }
 

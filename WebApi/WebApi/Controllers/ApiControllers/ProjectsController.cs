@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using WebApi.Data;
 using WebApi.Models.DataModels;
 
@@ -17,117 +17,83 @@ namespace WebApi.Controllers.ApiControllers
             _context = context;
         }
 
+        private bool ProjectExists(Guid id)
+        {
+            return (_context.Projects?.Any(e => e.Id == id)).GetValueOrDefault();
+        }
+
+        private IIncludableQueryable<Project, ICollection<Product>> GetProjectsIncludingNavigation()
+        {
+            return _context.Projects.Include(p => p.AssignedUsers).Include(p => p.AssignedProducts);
+        }
+
         [HttpGet]
-        //[Authorize(Roles = "Administrators")]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
+        public async Task<ActionResult<IEnumerable<ProjectReadDto>>> GetProjects()
         {
             if (_context.Projects == null)
             {
                 return NotFound();
             }
-            return await _context.Projects.ToListAsync();
+            return await GetProjectsIncludingNavigation()
+                .Select(project => new ProjectReadDto(project)).ToListAsync();
         }
 
-
-        [HttpGet(nameof(ByMe))]
-        public async Task<ActionResult<IEnumerable<Project>>> ByMe()
+        [HttpGet("my")]
+        public async Task<ActionResult<IEnumerable<ProjectReadDto>>> GetMyProjects()
         {
-            if (_context.Projects == null || _context.Users == null || User?.Identity == null)
+            if (_context.Projects == null || _context.Users == null || User.Identity == null)
             {
                 return NotFound();
             }
-            var users = await _context.Users.ToListAsync(); 
-            var myUser = users.SingleOrDefault(user => user.Email == User.Identity.Name);
+
+            var myUser = _context.Users.SingleOrDefault(user => user.UserName == User.Identity.Name);
+
             if (myUser == null)
             {
                 return NotFound();
             }
-
-            return await _context.Projects.Where(project => project.CreatorId == myUser.Id).ToListAsync();
+            return await GetProjectsIncludingNavigation()
+                .Where(project => project.CreatorId == myUser.Id)
+                .Select(project => new ProjectReadDto(project)).ToListAsync();
         }
 
-        //[HttpGet("{id}")]
-        //[Authorize(Roles = "Administrators")]
-        //public async Task<ActionResult<Project>> GetProject(Guid id)
-        //{
-        //    if (_context.Projects == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    var project = await _context.Projects.FindAsync(id);
-
-        //    if (project == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    return project;
-        //}
-
-        //[HttpPut("{id}")]
-        //[Authorize(Roles = "Administrators")]
-        //public async Task<IActionResult> PutProject(Guid id, Project project)
-        //{
-        //    if (id != project.Id)
-        //    {
-        //        return BadRequest();
-        //    }
-
-        //    _context.Entry(project).State = EntityState.Modified;
-
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!ProjectExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
-
-        //    return NoContent();
-        //}
-
-        /// <summary>
-        /// Assigns a user to a project.
-        /// </summary>
-        /// <param name="id">project id</param>
-        /// <param name="userIds">user id to assign</param>
-        /// <remarks>
-        /// Sample request:
-        ///
-        ///     Put /api/Projects/1/1
-        ///
-        /// </remarks>
-        /// <returns>response</returns>
-        /// <response code="200">On succesful assignment</response>
-        /// <response code="404">If project or users are missing</response>
-        [HttpPut("{id}/{userId}")]
-        public async Task<IActionResult> AssignUsersToMyProject(Guid id, Guid userId)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ProjectReadDto>> GetProject(Guid id)
         {
-            if (_context.Projects == null || _context.Users == null || User?.Identity == null)
+            if (_context.Projects == null)
+            {
+                return NotFound();
+            }
+            var project = await _context.Projects.FindAsync(id);
+
+            if (project == null)
             {
                 return NotFound();
             }
 
-            var myUser = _context.Users.Single(user => user.Name == User.Identity.Name);
-            var myProject = _context.Projects.Single(project => project.Id == id);
-            var assignedUser = _context.Users.SingleOrDefault(user => user.Id == userId);
+            return new ProjectReadDto(project);
+        }
 
-            if (myUser == null || myProject == null || assignedUser == null)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutProject(Guid id, ProjectCreateDto dto)
+        {
+            var project = new Project(dto)
             {
-                return NotFound();
+                Id = id,
+                UpdatedDate = DateTime.Now,
+            };
+
+            project.Creator = _context.Users.SingleOrDefault(user => user.Id == project.CreatorId);
+            if (project.Creator == null)
+            {
+                return Problem("Creator does not exist.");
             }
+            var users = await _context.Users.Where(user => dto.AssignedUsers.Contains(user.Id)).ToListAsync();
+            project.AssignedUsers = users;
+            var products = await _context.Products.Where(product => dto.AssignedProducts.Contains(product.Id)).ToListAsync();
+            project.AssignedProducts = products;
 
-            myProject.AssignedUsers.Add(assignedUser);
-            _context.Entry(myProject).State = EntityState.Modified;
-
+            _context.Entry(project).State = EntityState.Modified;
             try
             {
                 await _context.SaveChangesAsync();
@@ -148,41 +114,66 @@ namespace WebApi.Controllers.ApiControllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Project>> PostProject(Project project)
+        public async Task<ActionResult<ProjectCreateDto>> PostProject(ProjectCreateDto dto)
         {
             if (_context.Projects == null)
             {
-                return Problem("Entity set 'WebApiContext.Project' is null.");
+                return Problem("Entity set 'WebApiContext.Projects' is null.");
             }
+
+            var project = new Project(dto);
+            project.Creator = _context.Users.SingleOrDefault(user => user.Id == project.CreatorId);
+            if (project.Creator == null)
+            {
+                return Problem("Creator does not exist.");
+            }
+
             _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProject", new { id = project.Id }, project);
+            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new ProjectReadDto(project));
         }
 
-        //[HttpDelete("{id}")]
-        //[Authorize(Roles = "Administrators")]
-        //public async Task<IActionResult> DeleteProject(Guid id)
-        //{
-        //    if (_context.Projects == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    var project = await _context.Projects.FindAsync(id);
-        //    if (project == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    _context.Projects.Remove(project);
-        //    await _context.SaveChangesAsync();
-
-        //    return NoContent();
-        //}
-
-        private bool ProjectExists(Guid id)
+        [HttpPost("my")]
+        public async Task<ActionResult<ProjectUpdateDto>> PostMyProject(ProjectUpdateDto dto)
         {
-            return (_context.Projects?.Any(e => e.Id == id)).GetValueOrDefault();
+            if (_context.Projects == null || _context.Users == null || User.Identity == null)
+            {
+                return Problem("Entity set or User identity is null.");
+            }
+
+            var project = new Project(dto)
+            {
+                Creator = _context.Users.SingleOrDefault(user => user.UserName == User.Identity.Name)
+            };
+            if (project.Creator == null)
+            {
+                return Problem("Creator does not exist.");
+            }
+
+            _context.Projects.Add(project);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, new ProjectReadDto(project));
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProject(Guid id)
+        {
+            if (_context.Projects == null)
+            {
+                return NotFound();
+            }
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+            {
+                return NotFound();
+            }
+
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

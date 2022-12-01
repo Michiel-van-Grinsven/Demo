@@ -12,7 +12,7 @@ using WebApi.Data;
 namespace WebApi.Migrations
 {
     [DbContext(typeof(WebApiContext))]
-    [Migration("20221130213018_InitialCreate")]
+    [Migration("20221201135647_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -194,7 +194,8 @@ namespace WebApi.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newsequentialid()");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
@@ -394,13 +395,13 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Models.DataModels.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("WebApi.Models.DataModels.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });
 
@@ -409,13 +410,13 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Models.DataModels.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
                 });
 
@@ -424,7 +425,7 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", "Creator")
                         .WithMany("CreatedProducts")
                         .HasForeignKey("CreatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Creator");
@@ -435,7 +436,7 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", "Creator")
                         .WithMany("CreatedProjects")
                         .HasForeignKey("CreatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Creator");

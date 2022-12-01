@@ -23,10 +23,10 @@ public class WebApiUser : IdentityUser<Guid>, ITimeEntity
     [Required]
     public DateTime UpdatedDate { get; set; }
 
-    public virtual ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
+    public ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
 
-    public virtual ICollection<Project> CreatedProjects { get; set; } = new List<Project>();
+    public ICollection<Project> CreatedProjects { get; set; } = new List<Project>();
 
-    public virtual ICollection<Product> CreatedProducts { get; set; } = new List<Product>();
+    public ICollection<Product> CreatedProducts { get; set; } = new List<Product>();
 }
 

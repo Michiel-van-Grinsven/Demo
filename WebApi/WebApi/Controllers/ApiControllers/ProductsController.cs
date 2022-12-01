@@ -137,8 +137,10 @@ namespace WebApi.Controllers.ApiControllers
                 return Problem("Entity set or User identity is null.");
             }
 
-            var product = new Product(dto);
-            product.Creator = _context.Users.SingleOrDefault(user => user.Email == User.Identity.Name);
+            var product = new Product(dto)
+            {
+                Creator = _context.Users.SingleOrDefault(user => user.Email == User.Identity.Name)
+            };
             if (product.Creator == null)
             {
                 return Problem("Creator does not exist.");
