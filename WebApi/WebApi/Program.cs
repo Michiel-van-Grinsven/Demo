@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using WebApi.Areas.Identity.Data;
 using WebApi.Data;
 
@@ -18,6 +19,13 @@ namespace WebApi
 
             builder.Services.AddDefaultIdentity<WebApiUser>(options => options.SignIn.RequireConfirmedAccount = true)
                 .AddEntityFrameworkStores<WebApiContext>();
+
+            builder.Services.AddMvc()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                });
+
             builder.Services.AddControllersWithViews();
             builder.Services.AddControllers();
 

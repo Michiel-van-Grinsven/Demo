@@ -5,7 +5,7 @@ namespace WebApi.Areas.Identity.Data;
 [NotMapped]
 public class WebApiUserDto
 {
-    public string CreatorId { get; set; } = string.Empty;
+    public Guid CreatorId { get; set; } = Guid.Empty;
 
     public string FirstName { get; set; } = string.Empty;
 

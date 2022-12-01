@@ -10,20 +10,24 @@ namespace WebApi.Models.DataModels
         [Key]
         [Required]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         public string Name { get; set; } = string.Empty;
 
         [Required]
         [ForeignKey(nameof(WebApiUser.Id))]
-        public string CreatorId { get; set; } = string.Empty;
+        public Guid CreatorId { get; set; } = Guid.Empty;
 
         public virtual WebApiUser? Creator { get; set; }
 
         [Required]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime CreatedDate { get; set; }
 
         [Required]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         public DateTime UpdatedDate { get; set; }
     }
 }

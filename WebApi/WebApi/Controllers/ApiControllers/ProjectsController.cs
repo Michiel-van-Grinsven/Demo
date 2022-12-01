@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApi.Data;
@@ -21,46 +17,116 @@ namespace WebApi.Controllers.ApiControllers
             _context = context;
         }
 
-        // GET: api/Projects
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Project>>> GetProject()
+        //[Authorize(Roles = "Administrators")]
+        public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-          if (_context.Project == null)
-          {
-              return NotFound();
-          }
-            return await _context.Project.ToListAsync();
+            if (_context.Projects == null)
+            {
+                return NotFound();
+            }
+            return await _context.Projects.ToListAsync();
         }
 
-        // GET: api/Projects/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Project>> GetProject(int id)
-        {
-          if (_context.Project == null)
-          {
-              return NotFound();
-          }
-            var project = await _context.Project.FindAsync(id);
 
-            if (project == null)
+        [HttpGet(nameof(ByMe))]
+        public async Task<ActionResult<IEnumerable<Project>>> ByMe()
+        {
+            if (_context.Projects == null || _context.Users == null || User?.Identity == null)
+            {
+                return NotFound();
+            }
+            var users = await _context.Users.ToListAsync(); 
+            var myUser = users.SingleOrDefault(user => user.Email == User.Identity.Name);
+            if (myUser == null)
             {
                 return NotFound();
             }
 
-            return project;
+            return await _context.Projects.Where(project => project.CreatorId == myUser.Id).ToListAsync();
         }
 
-        // PUT: api/Projects/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutProject(int id, Project project)
+        //[HttpGet("{id}")]
+        //[Authorize(Roles = "Administrators")]
+        //public async Task<ActionResult<Project>> GetProject(Guid id)
+        //{
+        //    if (_context.Projects == null)
+        //    {
+        //        return NotFound();
+        //    }
+        //    var project = await _context.Projects.FindAsync(id);
+
+        //    if (project == null)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //    return project;
+        //}
+
+        //[HttpPut("{id}")]
+        //[Authorize(Roles = "Administrators")]
+        //public async Task<IActionResult> PutProject(Guid id, Project project)
+        //{
+        //    if (id != project.Id)
+        //    {
+        //        return BadRequest();
+        //    }
+
+        //    _context.Entry(project).State = EntityState.Modified;
+
+        //    try
+        //    {
+        //        await _context.SaveChangesAsync();
+        //    }
+        //    catch (DbUpdateConcurrencyException)
+        //    {
+        //        if (!ProjectExists(id))
+        //        {
+        //            return NotFound();
+        //        }
+        //        else
+        //        {
+        //            throw;
+        //        }
+        //    }
+
+        //    return NoContent();
+        //}
+
+        /// <summary>
+        /// Assigns a user to a project.
+        /// </summary>
+        /// <param name="id">project id</param>
+        /// <param name="userIds">user id to assign</param>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     Put /api/Projects/1/1
+        ///
+        /// </remarks>
+        /// <returns>response</returns>
+        /// <response code="200">On succesful assignment</response>
+        /// <response code="404">If project or users are missing</response>
+        [HttpPut("{id}/{userId}")]
+        public async Task<IActionResult> AssignUsersToMyProject(Guid id, Guid userId)
         {
-            if (id != project.Id)
+            if (_context.Projects == null || _context.Users == null || User?.Identity == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(project).State = EntityState.Modified;
+            var myUser = _context.Users.Single(user => user.Name == User.Identity.Name);
+            var myProject = _context.Projects.Single(project => project.Id == id);
+            var assignedUser = _context.Users.SingleOrDefault(user => user.Id == userId);
+
+            if (myUser == null || myProject == null || assignedUser == null)
+            {
+                return NotFound();
+            }
+
+            myProject.AssignedUsers.Add(assignedUser);
+            _context.Entry(myProject).State = EntityState.Modified;
 
             try
             {
@@ -81,44 +147,42 @@ namespace WebApi.Controllers.ApiControllers
             return NoContent();
         }
 
-        // POST: api/Projects
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
-          if (_context.Project == null)
-          {
-              return Problem("Entity set 'WebApiContext.Project'  is null.");
-          }
-            _context.Project.Add(project);
+            if (_context.Projects == null)
+            {
+                return Problem("Entity set 'WebApiContext.Project' is null.");
+            }
+            _context.Projects.Add(project);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetProject", new { id = project.Id }, project);
         }
 
-        // DELETE: api/Projects/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProject(int id)
+        //[HttpDelete("{id}")]
+        //[Authorize(Roles = "Administrators")]
+        //public async Task<IActionResult> DeleteProject(Guid id)
+        //{
+        //    if (_context.Projects == null)
+        //    {
+        //        return NotFound();
+        //    }
+        //    var project = await _context.Projects.FindAsync(id);
+        //    if (project == null)
+        //    {
+        //        return NotFound();
+        //    }
+
+        //    _context.Projects.Remove(project);
+        //    await _context.SaveChangesAsync();
+
+        //    return NoContent();
+        //}
+
+        private bool ProjectExists(Guid id)
         {
-            if (_context.Project == null)
-            {
-                return NotFound();
-            }
-            var project = await _context.Project.FindAsync(id);
-            if (project == null)
-            {
-                return NotFound();
-            }
-
-            _context.Project.Remove(project);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-
-        private bool ProjectExists(int id)
-        {
-            return (_context.Project?.Any(e => e.Id == id)).GetValueOrDefault();
+            return (_context.Projects?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

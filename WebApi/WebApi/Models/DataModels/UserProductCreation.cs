@@ -8,12 +8,12 @@ namespace WebApi.Models.DataModels
     public class UserProductCreation
     {
         [ForeignKey(nameof(WebApiUser.Id))]
-        public string CreatorId { get; set; } = string.Empty;
+        public Guid CreatorId { get; set; } = Guid.Empty;
 
         public virtual WebApiUser? Creator { get; set; }
 
         [ForeignKey(nameof(DataModels.Product.Id))]
-        public int ProductId { get; set; }
+        public Guid ProductId { get; set; } = Guid.Empty;
 
         public virtual Product? Product { get; set; }
     }

@@ -8,12 +8,12 @@ namespace WebApi.Models.DataModels
     public class UserProjectAssignment
     {
         [ForeignKey(nameof(WebApiUser.Id))]
-        public string UserId { get; set; } = string.Empty;
+        public Guid UserId { get; set; } = Guid.Empty;
 
         public virtual WebApiUser? User { get; set; }
 
         [ForeignKey(nameof(DataModels.Project.Id))]
-        public int ProjectId { get; set; }
+        public Guid ProjectId { get; set; } = Guid.Empty;
 
         public virtual Project? Project { get; set; }
     }

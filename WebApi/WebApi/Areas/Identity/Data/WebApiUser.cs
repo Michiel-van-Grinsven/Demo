@@ -6,7 +6,7 @@ using WebApi.Models.DataModels.Interfaces;
 
 namespace WebApi.Areas.Identity.Data;
 
-public class WebApiUser : IdentityUser, ITimeEntity
+public class WebApiUser : IdentityUser<Guid>, ITimeEntity
 {
     [Required]
     public string FirstName { get; set; } = string.Empty;
