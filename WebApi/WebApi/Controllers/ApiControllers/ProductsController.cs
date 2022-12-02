@@ -84,7 +84,7 @@ namespace WebApi.Controllers.ApiControllers
         ///     Put /api/Products/{guid}
         /// </remarks>
         /// <returns>A product.</returns>
-        /// <response code="404">No  product found.</response>
+        /// <response code="404">No product found.</response>
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductReadDto>> GetProduct(Guid id)
         {

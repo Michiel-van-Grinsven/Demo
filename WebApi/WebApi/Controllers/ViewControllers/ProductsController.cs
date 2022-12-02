@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using WebApi.Data;
 using WebApi.Models.DataModels;
 
@@ -8,6 +9,13 @@ namespace WebApi.Controllers.ViewControllers
 {
     public class ProductsController : Controller
     {
+
+        static readonly List<KeyValuePair<string, int>> Units = new List<KeyValuePair<string, int>>() {
+            new KeyValuePair<string, int>("g", 1),
+            new KeyValuePair<string, int>("kg", 1000),
+            new KeyValuePair<string, int>("t", 1000000)
+        };
+
         private readonly WebApiContext _context;
 
         public ProductsController(WebApiContext context)
@@ -15,58 +23,47 @@ namespace WebApi.Controllers.ViewControllers
             _context = context;
         }
 
-        // GET: Products
         public async Task<IActionResult> Index()
         {
-            var webApiContext = _context.Products.Include(p => p.Creator);
+            var webApiContext = _context.Products
+                .Include(p => p.Creator)
+                .Include(p => p.AssignedProjects);
             return View(await webApiContext.ToListAsync());
         }
 
-        // GET: Products/Details/5
-        public async Task<IActionResult> Details(Guid? id)
-        {
-            if (id == null || _context.Products == null)
-            {
-                return NotFound();
-            }
-
-            var product = await _context.Products
-                .Include(p => p.Creator)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            return View(product);
-        }
-
-        // GET: Products/Create
         public IActionResult Create()
         {
-            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "FirstName");
+            var units = new SelectList(Units.Select(unit => unit.Key));
+            ViewData["Units"] = units;
+            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id");
+            ViewData["AssignedProjects"] = new SelectList(_context.Projects, "Id", "Id");
             return View();
         }
 
-        // POST: Products/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("WeightInGrams,CarbonOutputPerGram,Id,Name,CreatorId,CreatedDate,UpdatedDate")] Product product)
+        public async Task<IActionResult> Create([Bind("Name,Unit,WeightInGrams,CarbonOutputPerGram")] ProductCreateDto dto)
         {
+            var product = new Product(dto);
             if (ModelState.IsValid)
             {
+
+                product.WeightInGrams *= Units.Single(unit => unit.Key == dto.Unit).Value;
                 product.Id = Guid.NewGuid();
+                product.CreatedDate = DateTime.Now;
+                product.UpdatedDate = DateTime.Now;
+                product.CreatorId = new Guid(User.FindFirstValue(ClaimTypes.NameIdentifier));
                 _context.Add(product);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "FirstName", product.CreatorId);
+            var units = new SelectList(Units.Select(unit => unit.Key));
+            ViewData["Units"] = units;
+            ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id");
+            ViewData["AssignedProjects"] = new SelectList(_context.Projects, "Id", "Id");
             return View(product);
         }
 
-        // GET: Products/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
             if (id == null || _context.Products == null)
@@ -83,14 +80,20 @@ namespace WebApi.Controllers.ViewControllers
             return View(product);
         }
 
-        // POST: Products/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("WeightInGrams,CarbonOutputPerGram,Id,Name,CreatorId,CreatedDate,UpdatedDate")] Product product)
+        public async Task<IActionResult> Edit(Guid id, [Bind("Name,WeightInGrams,CarbonOutputPerGram")] Product product)
         {
-            if (id != product.Id)
+            var oldProduct = await _context.Products.AsNoTracking()
+                .SingleOrDefaultAsync(product => product.Id == id);
+            var user = await _context.Users
+                .SingleOrDefaultAsync(user => user.Id == new Guid(User.FindFirstValue(ClaimTypes.NameIdentifier)));
+            product.Id = id;
+            product.Creator = user;
+            product.CreatorId = user.Id;
+
+            if (id != oldProduct.Id || oldProduct.CreatorId != user.Id)
             {
                 return NotFound();
             }
@@ -99,6 +102,7 @@ namespace WebApi.Controllers.ViewControllers
             {
                 try
                 {
+
                     _context.Update(product);
                     await _context.SaveChangesAsync();
                 }
@@ -119,7 +123,6 @@ namespace WebApi.Controllers.ViewControllers
             return View(product);
         }
 
-        // GET: Products/Delete/5
         public async Task<IActionResult> Delete(Guid? id)
         {
             if (id == null || _context.Products == null)
@@ -138,14 +141,13 @@ namespace WebApi.Controllers.ViewControllers
             return View(product);
         }
 
-        // POST: Products/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
             if (_context.Products == null)
             {
-                return Problem("Entity set 'WebApiContext.Products'  is null.");
+                return Problem("Entity set 'WebApiContext.Products' is null.");
             }
             var product = await _context.Products.FindAsync(id);
             if (product != null)

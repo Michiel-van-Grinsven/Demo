@@ -177,9 +177,6 @@ namespace WebApi.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<Guid?>("WebApiUserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
@@ -187,19 +184,17 @@ namespace WebApi.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.HasIndex("WebApiUserId");
-
                     b.ToTable("AspNetRoles", (string)null);
 
                     b.HasData(
                         new
                         {
-                            Id = new Guid("10720e71-308a-45f2-9f5e-45ca314d0bf1"),
+                            Id = new Guid("fca5537c-e258-4dd4-a676-d9b9965f31f0"),
                             Name = "Admin"
                         },
                         new
                         {
-                            Id = new Guid("4b58f9ad-12f1-4032-bb1d-140f21853973"),
+                            Id = new Guid("bb7101d1-bbaf-4793-a7bf-9fdcba5d9b30"),
                             Name = "Client"
                         });
                 });
@@ -413,13 +408,13 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Models.DataModels.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("WebApi.Models.DataModels.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -428,21 +423,14 @@ namespace WebApi.Migrations
                     b.HasOne("WebApi.Models.DataModels.Project", null)
                         .WithMany()
                         .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("WebApi.Areas.Identity.Data.WebApiRole", b =>
-                {
-                    b.HasOne("WebApi.Areas.Identity.Data.WebApiUser", null)
-                        .WithMany("roles")
-                        .HasForeignKey("WebApiUserId");
                 });
 
             modelBuilder.Entity("WebApi.Models.DataModels.Product", b =>
@@ -472,8 +460,6 @@ namespace WebApi.Migrations
                     b.Navigation("CreatedProducts");
 
                     b.Navigation("CreatedProjects");
-
-                    b.Navigation("roles");
                 });
 #pragma warning restore 612, 618
         }

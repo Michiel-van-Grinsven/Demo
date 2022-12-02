@@ -18,6 +18,8 @@ namespace WebApi.Models.DataModels
 
         public string Name { get; set; } = string.Empty;
 
+        public string Unit { get; set; } = "g"; 
+
         public Guid CreatorId { get; set; } = Guid.Empty;
 
         public double WeightInGrams { get; set; } = 0.0;

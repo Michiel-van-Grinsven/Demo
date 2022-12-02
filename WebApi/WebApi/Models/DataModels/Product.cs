@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using WebApi.Data.Validators;
 
 namespace WebApi.Models.DataModels
 {
@@ -34,9 +35,11 @@ namespace WebApi.Models.DataModels
         }
 
         [Required]
+        [RequiredGreaterThanZero(ErrorMessage = "Must be greater than 0.")]
         public double WeightInGrams { get; set; }
 
         [Required]
+        [RequiredGreaterThanZero(ErrorMessage = "Must be greater than 0.")]
         public double CarbonOutputPerGram { get; set; }
 
         [NotMapped]

@@ -78,11 +78,11 @@ public class WebApiContext : IdentityDbContext<WebApiUser, WebApiRole, Guid>
                     table => table.HasOne<WebApiUser>()
                             .WithMany()
                             .HasForeignKey("UserId")
-                            .OnDelete(DeleteBehavior.NoAction),
+                            .OnDelete(DeleteBehavior.Cascade),
                     table => table.HasOne<Project>()
                             .WithMany()
                             .HasForeignKey("ProjectId")
-                            .OnDelete(DeleteBehavior.NoAction)
+                            .OnDelete(DeleteBehavior.Cascade)
                 );
             x.HasMany(x => x.AssignedProducts)
                 .WithMany(user => user.AssignedProjects)
@@ -91,11 +91,11 @@ public class WebApiContext : IdentityDbContext<WebApiUser, WebApiRole, Guid>
                     table => table.HasOne<Product>()
                             .WithMany()
                             .HasForeignKey("ProductId")
-                            .OnDelete(DeleteBehavior.NoAction),
+                            .OnDelete(DeleteBehavior.Cascade),
                     table => table.HasOne<Project>()
                             .WithMany()
                             .HasForeignKey("ProjectId")
-                            .OnDelete(DeleteBehavior.NoAction)
+                            .OnDelete(DeleteBehavior.Cascade)
                 );
             x.HasKey(x => x.Id);
             x.ToTable("Projects");
