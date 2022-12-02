@@ -1,0 +1,101 @@
+﻿@model IEnumerable<WebApi.Models.DataModels.Project>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+
+        <tr>
+            <th>
+                <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]">@Html.DisplayNameFor(model => model.Name)</a>
+            </th>
+            @*  <th>
+            @Html.DisplayNameFor(model => model.Name)
+            </th>*@
+            <th>
+                @Html.DisplayNameFor(model => model.Creator)
+            </th>
+            <th>
+                <a asp-action="Index" asp-route-sortOrder="@ViewData["DateSortParm"]">@Html.DisplayNameFor(model => model.CreatedDate)</a>
+            </th>
+            @*  <th>
+            @Html.DisplayNameFor(model => model.CreatedDate)
+            </th>*@
+            <th>
+                @Html.DisplayNameFor(model => model.UpdatedDate)
+            </th>
+            <th>
+                <a asp-action="Index" asp-route-sortOrder="@ViewData["UserSortParm"]">@Html.DisplayNameFor(model => model.AssignedUsers)</a>
+            </th>
+            @*  <th>
+            @Html.DisplayNameFor(model => model.AssignedUsers)
+            </th>*@
+            <th>
+                @Html.DisplayNameFor(model => model.AssignedProducts)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.TotalCarbonOutput)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                @{
+                    var parameterValue = (item.Creator?.FirstName ?? "") + " " + (item.Creator?.LastName ?? "");
+                }
+                <td>
+                    @Html.DisplayFor(modelItem => parameterValue)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CreatedDate)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.UpdatedDate)
+                </td>
+                @{
+                    var users = string.Join(", ", item.AssignedUsers.Select(user => user.Name));
+                }
+                <td>
+                    @Html.DisplayFor(modelItem => users)
+                </td>
+                @{
+                    var products = string.Join(", ", item.AssignedProducts.Select(product => product.Name));
+                }
+                <td>
+                    @Html.DisplayFor(modelItem => products)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TotalCarbonOutput)
+                </td>
+                @{
+                    if (item.CreatorId == new Guid(User.FindFirstValue(ClaimTypes.NameIdentifier)))
+                    {
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                            <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+                        </td>
+                    }
+                    else if (item.AssignedUsers.Select(user => user.Id).Contains(new Guid(User.FindFirstValue(ClaimTypes.NameIdentifier))))
+                    {
+                        <td>
+                            <a asp-action="Unassign" asp-route-id="@item.Id">Unassign</a>
+                        </td>
+                    }
+                }
+            </tr>
+        }
+    </tbody>
+</table>
