@@ -30,11 +30,11 @@ namespace WebApi.Models.DataModels
 
         public DateTime UpdatedDate { get; set; } = DateTime.Now;
 
-        public double WeightInGrams { get; set; } = 0.0;
+        public decimal WeightInGrams { get; set; } = 0;
 
-        public double CarbonOutputPerGram { get; set; } = 0.0;
+        public decimal CarbonOutputPerGram { get; set; } = 0;
 
-        public double TotalCarbonOutput { get; set; } = 0.0;
+        public decimal TotalCarbonOutput { get; set; } = 0;
 
         public List<Guid> AssignedProjects { get; set; } = new List<Guid>();
     }

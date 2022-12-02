@@ -167,8 +167,8 @@ namespace WebApi.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newsequentialid()"),
-                    WeightInGrams = table.Column<double>(type: "float", nullable: false),
-                    CarbonOutputPerGram = table.Column<double>(type: "float", nullable: false),
+                    WeightInGrams = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CarbonOutputPerGram = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "getdate()"),
@@ -257,8 +257,8 @@ namespace WebApi.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { new Guid("bb7101d1-bbaf-4793-a7bf-9fdcba5d9b30"), null, "Client", null },
-                    { new Guid("fca5537c-e258-4dd4-a676-d9b9965f31f0"), null, "Admin", null }
+                    { new Guid("278eb3f6-ce31-4ade-be94-81d7ea68a480"), null, "Admin", null },
+                    { new Guid("f4906172-cb23-432b-97e3-c27e5861c72f"), null, "Client", null }
                 });
 
             migrationBuilder.CreateIndex(

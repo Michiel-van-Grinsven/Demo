@@ -25,6 +25,7 @@ namespace WebApi
 
         private static void ConfigureApp(WebApplication app)
         {
+            //app.UseRequestLocalization();
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Globalization;
 using WebApi.Data.Validators;
 
 namespace WebApi.Models.DataModels
@@ -12,8 +13,8 @@ namespace WebApi.Models.DataModels
         {
             Name = dto.Name;
             CreatorId = dto.CreatorId;
-            WeightInGrams = dto.WeightInGrams;
-            CarbonOutputPerGram = dto.CarbonOutputPerGram;
+            WeightInGrams = decimal.Parse(dto.WeightInGrams, CultureInfo.InvariantCulture);
+            CarbonOutputPerGram = decimal.Parse(dto.CarbonOutputPerGram, CultureInfo.InvariantCulture);
         }
 
         public Product(ProductReadDto dto)
@@ -36,14 +37,14 @@ namespace WebApi.Models.DataModels
 
         [Required]
         [RequiredGreaterThanZero(ErrorMessage = "Must be greater than 0.")]
-        public double WeightInGrams { get; set; }
+        public decimal WeightInGrams { get; set; }
 
         [Required]
         [RequiredGreaterThanZero(ErrorMessage = "Must be greater than 0.")]
-        public double CarbonOutputPerGram { get; set; }
+        public decimal CarbonOutputPerGram { get; set; }
 
         [NotMapped]
-        public double TotalCarbonOutput { get { return CarbonOutputPerGram * WeightInGrams; } }
+        public decimal TotalCarbonOutput { get { return CarbonOutputPerGram * WeightInGrams; } }
 
         public ICollection<Project> AssignedProjects { get; set; } = new List<Project>();
     }

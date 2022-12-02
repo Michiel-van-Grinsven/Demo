@@ -32,11 +32,11 @@ namespace WebApi.Models.DataModels
         public ICollection<Product> AssignedProducts { get; set; } = new List<Product>();
 
         [NotMapped]
-        public double TotalCarbonOutput
+        public decimal TotalCarbonOutput
         {
             get
             {
-                var total = 0.0;
+                decimal total = 0;
                 foreach (var product in AssignedProducts)
                 {
                     total += product.TotalCarbonOutput;

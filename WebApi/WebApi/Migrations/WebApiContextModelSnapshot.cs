@@ -189,12 +189,12 @@ namespace WebApi.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("fca5537c-e258-4dd4-a676-d9b9965f31f0"),
+                            Id = new Guid("278eb3f6-ce31-4ade-be94-81d7ea68a480"),
                             Name = "Admin"
                         },
                         new
                         {
-                            Id = new Guid("bb7101d1-bbaf-4793-a7bf-9fdcba5d9b30"),
+                            Id = new Guid("f4906172-cb23-432b-97e3-c27e5861c72f"),
                             Name = "Client"
                         });
                 });
@@ -291,8 +291,8 @@ namespace WebApi.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasDefaultValueSql("newsequentialid()");
 
-                    b.Property<double>("CarbonOutputPerGram")
-                        .HasColumnType("float");
+                    b.Property<decimal>("CarbonOutputPerGram")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedDate")
                         .ValueGeneratedOnAdd()
@@ -311,8 +311,8 @@ namespace WebApi.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("getdate()");
 
-                    b.Property<double>("WeightInGrams")
-                        .HasColumnType("float");
+                    b.Property<decimal>("WeightInGrams")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 

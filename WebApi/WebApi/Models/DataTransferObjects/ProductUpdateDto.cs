@@ -17,9 +17,9 @@ namespace WebApi.Models.DataModels
 
         public string Name { get; set; } = string.Empty;
 
-        public double WeightInGrams { get; set; } = 0.0;
+        public decimal WeightInGrams { get; set; } = 0;
 
-        public double CarbonOutputPerGram { get; set; } = 0.0;
+        public decimal CarbonOutputPerGram { get; set; } = 0;
 
         public List<Guid> AssignedProjects { get; set; } = new List<Guid>();
     }

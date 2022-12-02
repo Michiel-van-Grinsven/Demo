@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace WebApi.Models.DataModels
 {
@@ -11,8 +12,8 @@ namespace WebApi.Models.DataModels
         {
             Name = product.Name;
             CreatorId = product.CreatorId;
-            WeightInGrams = product.WeightInGrams;
-            CarbonOutputPerGram = product.CarbonOutputPerGram;
+            WeightInGrams = product.WeightInGrams.ToString();
+            CarbonOutputPerGram = product.CarbonOutputPerGram.ToString();
             AssignedProjects = product.AssignedProjects.Select(project => project.Id).ToList();
         }
 
@@ -22,9 +23,10 @@ namespace WebApi.Models.DataModels
 
         public Guid CreatorId { get; set; } = Guid.Empty;
 
-        public double WeightInGrams { get; set; } = 0.0;
+        [Display(Name = "WeightInUnits")]
+        public string WeightInGrams { get; set; } = "0";
 
-        public double CarbonOutputPerGram { get; set; } = 0.0;
+        public string CarbonOutputPerGram { get; set; } = "0";
 
         public List<Guid> AssignedProjects { get; set; } = new List<Guid>();
     }

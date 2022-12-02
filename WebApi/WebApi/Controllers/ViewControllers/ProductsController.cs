@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json.Linq;
+using System.Globalization;
 using System.Security.Claims;
 using WebApi.Data;
 using WebApi.Models.DataModels;
@@ -47,7 +49,9 @@ namespace WebApi.Controllers.ViewControllers
             var product = new Product(dto);
             if (ModelState.IsValid)
             {
-
+                product.WeightInGrams = decimal.Parse(dto.WeightInGrams, CultureInfo.InvariantCulture);
+                product.CarbonOutputPerGram = decimal.Parse(dto.CarbonOutputPerGram, CultureInfo.InvariantCulture);
+                // TODO Solve localization
                 product.WeightInGrams *= Units.Single(unit => unit.Key == dto.Unit).Value;
                 product.Id = Guid.NewGuid();
                 product.CreatedDate = DateTime.Now;
@@ -57,6 +61,7 @@ namespace WebApi.Controllers.ViewControllers
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+            // todo extract
             var units = new SelectList(Units.Select(unit => unit.Key));
             ViewData["Units"] = units;
             ViewData["CreatorId"] = new SelectList(_context.Users, "Id", "Id");
@@ -98,6 +103,7 @@ namespace WebApi.Controllers.ViewControllers
                 return NotFound();
             }
 
+            // todo extract
             if (ModelState.IsValid)
             {
                 try
